@@ -5,6 +5,8 @@ const includeUppercaseElement = document.getElementById('includeUppercase');
 const includeNumbersElement = document.getElementById('includeNumbers');
 const includeSymbolsElement = document.getElementById('includeSymbols');
 const passwordDisplay = document.getElementById('passwordDisplay');
+const passwordStrenghtMeter = document.getElementById('strenght-meter');
+const reasonsContainer = document.getElementById('reasons');
 
 const UPPERCASE_CHAR_CODES = arrayFromLowToHigh(65,90)
 const LOWERCASE_CHAR_CODES = arrayFromLowToHigh(97,122);
@@ -21,6 +23,7 @@ form.addEventListener('submit', e => {
   const includeNumbers = includeNumbersElement.checked;
   const includeSymbols = includeSymbolsElement.checked;
   const password = generatePassword(characterAmount,includeUppercase,includeNumbers,includeSymbols);
+  updateStrenghtMeter(password);
   passwordDisplay.innerText = password;
 })
 
@@ -51,3 +54,91 @@ function syncCharacterAmount(e){
   characterAmountNumber.value = value;
   characterAmountRange.value = value;
 }
+
+function updateStrenghtMeter(password){
+  const weaknesses = calculatePasswordStrenght(password);
+  let strenght = 100;
+  reasonsContainer.innerHTML = '';
+  weaknesses.forEach(weakness =>{
+    if(weakness == null) return;
+    strenght -= weakness.deduction;
+    const messageElement = document.createElement('div');
+    messageElement.innerText = weakness.message;
+    reasonsContainer.appendChild(messageElement);
+  });
+  passwordStrenghtMeter.style.setProperty('--strenght',strenght);
+}
+
+function calculatePasswordStrenght(password){
+  const weaknesses = [];
+  weaknesses.push(lengthWeakness(password));
+  weaknesses.push(lowerCaseWeakness(password));
+  weaknesses.push(upperCaseWeakness(password));
+  weaknesses.push(numbersWeakness(password));
+  weaknesses.push(specialCharactersWeakness(password));
+  weaknesses.push(repeatCharactersWeakness(password));
+  return weaknesses;
+}
+
+function lengthWeakness(password){
+  const length = password.length;
+
+  if(length <= 5){
+    return{
+      message:'Your password is too short',
+      deduction:40
+    }
+  }
+
+  if(length <= 10){
+    return{
+      message:'Your password could be longer',
+      deduction:15
+    }
+  }
+}
+
+function lowerCaseWeakness(password){
+  return characterTypeWeakness(password,/[a-z]/g,'lowercase characters');
+}
+
+  function upperCaseWeakness(password){
+    return characterTypeWeakness(password,/[A-Z]/g,'uppercase characters');  
+  }
+
+function numbersWeakness(password){
+    return characterTypeWeakness(password,/[0-9]/g,'numbers');  
+ }
+
+ function specialCharactersWeakness(password){
+  return characterTypeWeakness(password,/[^0-9a-zA-Z\s]/g,'special characters');  
+}
+
+  function characterTypeWeakness(password,regex,type){
+    const matches = password.match(regex) || [];
+
+    if(matches.length === 0){
+      return{
+        message: `Your password has no ${type}`,
+        deduction:20
+      }
+    }
+  
+    if(matches.length <= 2){
+      return{
+        message: `Your password could use more ${type}`,
+        deduction:5
+      }
+    }
+  }
+
+  function repeatCharactersWeakness(password){
+    const matches = password.match(/(.)\1/g) || [];
+    if(matches.length > 0){
+      return{
+        message:'Your password has repeating characters',
+        deduction:matches.length * 10
+      }
+    }
+  }
+  
